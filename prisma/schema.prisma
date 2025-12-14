@@ -1,0 +1,216 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  firebaseId  String   @unique
+  email       String   @unique
+  displayName String?
+  photoURL    String?
+  tier        Tier     @default(BRONZE)
+  ecoCoins    Int      @default(0)
+  streak      Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  activities    Activity[]
+  transactions  Transaction[]
+  missions      UserMission[]
+  shopOrders    ShopOrder[]
+  carbonCredits CarbonCredit[]
+
+  @@map("users")
+}
+
+model Activity {
+  id          String     @id @default(cuid())
+  userId      String
+  type        ActivityType
+  title       String
+  description String?
+  imageURL    String?
+  co2Saved    Float?
+  waterSaved  Float?
+  status      ActivityStatus @default(PENDING)
+  verifiedAt  DateTime?
+  verifiedBy  String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("activities")
+}
+
+model Mission {
+  id          String     @id @default(cuid())
+  title       String
+  description String
+  type        MissionType
+  duration    Int        // in days
+  reward      Int        // EcoCoins
+  co2Target   Float?
+  waterTarget Float?
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+
+  userMissions UserMission[]
+
+  @@map("missions")
+}
+
+model UserMission {
+  id        String           @id @default(cuid())
+  userId    String
+  missionId String
+  progress  Int              @default(0)
+  status    UserMissionStatus @default(ACTIVE)
+  startedAt DateTime         @default(now())
+  completedAt DateTime?
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mission Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, missionId])
+  @@map("user_missions")
+}
+
+model ShopItem {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  price       Int     // EcoCoins
+  imageURL    String?
+  category    String
+  stock       Int     @default(0)
+  isActive    Boolean @default(true)
+
+  orders ShopOrder[]
+
+  @@map("shop_items")
+}
+
+model ShopOrder {
+  id        String      @id @default(cuid())
+  userId    String
+  itemId    String
+  quantity  Int         @default(1)
+  totalCost Int
+  status    OrderStatus @default(PENDING)
+  createdAt DateTime    @default(now())
+
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item ShopItem @relation(fields: [itemId], references: [id])
+
+  @@map("shop_orders")
+}
+
+model Transaction {
+  id        String           @id @default(cuid())
+  userId    String
+  type      TransactionType
+  amount    Int
+  description String?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("transactions")
+}
+
+model CarbonCredit {
+  id          String  @id @default(cuid())
+  userId      String
+  projectName String
+  treeSpecies String
+  treeCount   Int
+  annualSeq   Float   // tonnes per year
+  totalSeq    Float   // total estimated
+  status      CarbonStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("carbon_credits")
+}
+
+model AgriTour {
+  id          String  @id @default(cuid())
+  name        String
+  description String
+  location    String
+  duration    String
+  price       Int     // EcoCoins
+  rating      Float?
+  reviewCount Int     @default(0)
+  imageURL    String?
+  isActive    Boolean @default(true)
+
+  @@map("agri_tours")
+}
+
+enum Tier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+enum ActivityType {
+  CYCLING
+  WALKING
+  PUBLIC_TRANSPORT
+  CARPOOLING
+  PLANTING
+  RECYCLING
+  WATER_CONSERVATION
+  OTHER
+}
+
+enum ActivityStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum MissionType {
+  CO2_REDUCTION
+  WATER_SAVING
+  PLASTIC_FREE
+  COMMUTE_CHANGE
+}
+
+enum UserMissionStatus {
+  ACTIVE
+  COMPLETED
+  FAILED
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum TransactionType {
+  EARNED
+  SPENT
+  BONUS
+}
+
+enum CarbonStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
