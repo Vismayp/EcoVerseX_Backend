@@ -27,6 +27,8 @@ model User {
   missions      UserMission[]
   shopOrders    ShopOrder[]
   carbonCredits CarbonCredit[]
+  tourBookings  AgriTourBooking[]
+  ecoCircles    UserEcoCircle[]
 
   @@map("users")
 }
@@ -155,7 +157,62 @@ model AgriTour {
   imageURL    String?
   isActive    Boolean @default(true)
 
+  bookings    AgriTourBooking[]
+
   @@map("agri_tours")
+}
+
+model AgriTourBooking {
+  id        String   @id @default(cuid())
+  userId    String
+  tourId    String
+  status    BookingStatus @default(PENDING)
+  tickets   Int      @default(1)
+  totalCost Int      // EcoCoins
+  bookingDate DateTime
+  createdAt DateTime @default(now())
+
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tour AgriTour @relation(fields: [tourId], references: [id])
+
+  @@map("agri_tour_bookings")
+}
+
+model EcoCircle {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  location    String?
+  imageURL    String?
+  createdAt   DateTime @default(now())
+
+  members UserEcoCircle[]
+
+  @@map("eco_circles")
+}
+
+model UserEcoCircle {
+  userId    String
+  circleId  String
+  role      CircleRole @default(MEMBER)
+  joinedAt  DateTime   @default(now())
+
+  user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  circle EcoCircle @relation(fields: [circleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, circleId])
+  @@map("user_eco_circles")
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum CircleRole {
+  MEMBER
+  LEADER
 }
 
 enum Tier {

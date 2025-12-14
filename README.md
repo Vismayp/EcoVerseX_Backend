@@ -57,12 +57,22 @@ Node.js backend for EcoVerseX, hosted on Railway.app. Handles user authenticatio
    npm start
    ```
 
-### API Endpoints
+## API Documentation (Swagger)
 
-- `POST /auth/login`: Firebase token verification
-- `POST /activities/log`: Submit activity with image
-- `GET /admin/pending`: Get pending verifications
-- `POST /admin/approve`: Approve/reject activity
+- Swagger UI: `http://localhost:<PORT>/api/docs`
+- OpenAPI JSON: `http://localhost:<PORT>/api/docs.json`
+
+### API Endpoints (high level)
+
+- Health: `GET /api/health`
+- User: `POST /api/user/sync`, `GET /api/user/profile`, `GET /api/user/leaderboard`
+- Activities: `GET/POST /api/activities`, `GET /api/activities/pending`, `PATCH /api/activities/:id/verify`
+- Missions: `GET /api/missions`, `POST /api/missions/:id/join`
+- Shop: `GET /api/shop/items`, `POST /api/shop/orders`
+- Tours: `GET /api/tours`, `POST /api/tours/book`
+- Carbon: `POST /api/carbon/calculate`, `GET /api/carbon/my-credits`
+- Community: `GET /api/circles`, `POST /api/circles/:id/join`
+- Admin: `GET /api/admin/stats`
 
 ### Database Schema
 
