@@ -41,6 +41,7 @@ const agritourRoutes = require("./routes/agritour.routes");
 const carbonRoutes = require("./routes/carbon.routes");
 const communityRoutes = require("./routes/community.routes");
 const adminRoutes = require("./routes/admin.routes");
+const notificationRoutes = require("./routes/notification.routes");
 const errorHandler = require("./middleware/error.middleware");
 
 // Use Routes
@@ -52,6 +53,7 @@ app.use("/api/tours", agritourRoutes);
 app.use("/api/carbon", carbonRoutes);
 app.use("/api/circles", communityRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // Error Handler
 app.use(errorHandler);

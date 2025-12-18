@@ -48,6 +48,44 @@ exports.syncUser = async (req, res) => {
   }
 };
 
+exports.getMyStats = async (req, res) => {
+  try {
+    if (!req.dbUser) return res.status(400).json({ error: "User not synced" });
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.dbUser.id },
+      include: {
+        activities: {
+          where: { status: "APPROVED" },
+          select: { co2Saved: true, waterSaved: true },
+        },
+        transactions: true, // Assuming transactions for EcoCoins history
+      },
+    });
+
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const totalCO2 = user.activities.reduce((sum, a) => sum + (a.co2Saved || 0), 0);
+    const totalWater = user.activities.reduce((sum, a) => sum + (a.waterSaved || 0), 0);
+    const totalWaste = 0; // Not implemented yet
+    const treesPlanted = Math.floor(totalCO2 / 22); // 22kg per tree
+
+    res.json({
+      ecoCoins: user.ecoCoins,
+      streak: user.streak,
+      tier: user.tier,
+      co2Saved: totalCO2,
+      waterSaved: totalWater,
+      wasteReduced: totalWaste,
+      treesPlanted,
+      lastActivityDate: user.lastActivityDate,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 exports.getLeaderboard = async (req, res) => {
   try {
     const users = await prisma.user.findMany({

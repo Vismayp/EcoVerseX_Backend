@@ -2,20 +2,26 @@ const admin = require("firebase-admin");
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
+const admin = require("firebase-admin");
+
 // Initialize Firebase Admin
+let firebaseAdmin;
 try {
   // Check if file exists before requiring to avoid crash
   // In production, prefer environment variables
   const serviceAccount = require("../../firebase-service-account.json");
   if (admin.apps.length === 0) {
-    admin.initializeApp({
+    firebaseAdmin = admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
     });
+  } else {
+    firebaseAdmin = admin.apps[0];
   }
 } catch (error) {
   console.warn(
     "Firebase service account not found or invalid. Auth middleware will fail for real tokens."
   );
+  firebaseAdmin = null;
 }
 
 const authenticate = async (req, res, next) => {
@@ -33,7 +39,11 @@ const authenticate = async (req, res, next) => {
       return next();
     }
 
-    const decodedToken = await admin.auth().verifyIdToken(token);
+    if (!firebaseAdmin) {
+      return res.status(500).json({ error: "Authentication not configured" });
+    }
+
+    const decodedToken = await firebaseAdmin.auth().verifyIdToken(token);
     req.user = decodedToken;
 
     // Attach DB user if exists
@@ -52,4 +62,11 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-module.exports = authenticate;
+const requireAdmin = (req, res, next) => {
+  if (!req.dbUser || req.dbUser.role !== "ADMIN") {
+    return res.status(403).json({ error: "Access denied. Admins only." });
+  }
+  next();
+};
+
+module.exports = { authenticate, requireAdmin };

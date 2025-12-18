@@ -3,17 +3,27 @@ const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const { PrismaClient } = require("@prisma/client");
-const admin = require("firebase-admin");
 require("dotenv").config();
 
 const app = express();
 const prisma = new PrismaClient();
 
 // Firebase Admin SDK
-const serviceAccount = require("./firebase-service-account.json"); // You'll need to add this file
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+let admin;
+try {
+  const adminModule = require("firebase-admin");
+  const serviceAccount = require("./firebase-service-account.json");
+  if (adminModule.apps.length === 0) {
+    admin = adminModule.initializeApp({
+      credential: adminModule.credential.cert(serviceAccount),
+    });
+  } else {
+    admin = adminModule.apps[0];
+  }
+} catch (error) {
+  console.warn("Firebase service account not found. Auth will be disabled.");
+  admin = null;
+}
 
 // Middleware
 app.use(helmet());
