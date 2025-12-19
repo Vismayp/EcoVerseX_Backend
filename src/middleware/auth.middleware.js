@@ -34,8 +34,17 @@ const authenticate = async (req, res, next) => {
     const token = authHeader.split(" ")[1];
 
     // Mock for testing if needed
-    if (process.env.NODE_ENV === "test" && token === "mock-token") {
-      req.user = { uid: "test-user-id", email: "test@example.com" };
+    if (
+      (process.env.NODE_ENV === "test" ||
+        process.env.NODE_ENV === "development") &&
+      token === "mock-token"
+    ) {
+      req.user = {
+        uid: "test-user-id",
+        email: "test@example.com",
+        name: "Test User",
+        picture: "https://example.com/avatar.jpg",
+      };
       return next();
     }
 

@@ -6,8 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model User {
@@ -17,7 +17,7 @@ model User {
   displayName String?
   photoURL    String?
   fcmToken    String?
-  tier        Tier     @default(BRONZE)
+  tier        String   @default("BRONZE")
   ecoCoins    Int      @default(0)
   streak      Int      @default(0)
   lastActivityDate DateTime?
@@ -38,13 +38,13 @@ model User {
 model Activity {
   id          String     @id @default(cuid())
   userId      String
-  type        ActivityType
+  type        String
   title       String
   description String?
   imageURL    String?
   co2Saved    Float?
   waterSaved  Float?
-  status      ActivityStatus @default(PENDING)
+  status      String   @default("PENDING")
   verifiedAt  DateTime?
   verifiedBy  String?
   createdAt   DateTime   @default(now())
@@ -59,7 +59,7 @@ model Mission {
   id          String     @id @default(cuid())
   title       String
   description String
-  type        MissionType
+  type        String
   duration    Int        // in days
   reward      Int        // EcoCoins
   co2Target   Float?
@@ -77,7 +77,7 @@ model UserMission {
   userId    String
   missionId String
   progress  Int              @default(0)
-  status    UserMissionStatus @default(ACTIVE)
+  status    String   @default("ACTIVE")
   startedAt DateTime         @default(now())
   completedAt DateTime?
 
@@ -109,7 +109,7 @@ model ShopOrder {
   itemId    String
   quantity  Int         @default(1)
   totalCost Int
-  status    OrderStatus @default(PENDING)
+  status    String   @default("PENDING")
   createdAt DateTime    @default(now())
 
   user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -121,7 +121,7 @@ model ShopOrder {
 model Transaction {
   id        String           @id @default(cuid())
   userId    String
-  type      TransactionType
+  type      String
   amount    Int
   description String?
   createdAt DateTime         @default(now())
@@ -139,7 +139,7 @@ model CarbonCredit {
   treeCount   Int
   annualSeq   Float   // tonnes per year
   totalSeq    Float   // total estimated
-  status      CarbonStatus @default(PENDING)
+  status      String   @default("PENDING")
   createdAt   DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -168,7 +168,7 @@ model AgriTourBooking {
   id        String   @id @default(cuid())
   userId    String
   tourId    String
-  status    BookingStatus @default(PENDING)
+  status    String   @default("PENDING")
   tickets   Int      @default(1)
   totalCost Int      // EcoCoins
   bookingDate DateTime
@@ -196,7 +196,7 @@ model EcoCircle {
 model UserEcoCircle {
   userId    String
   circleId  String
-  role      CircleRole @default(MEMBER)
+  role      String   @default("MEMBER")
   joinedAt  DateTime   @default(now())
 
   user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -204,72 +204,4 @@ model UserEcoCircle {
 
   @@id([userId, circleId])
   @@map("user_eco_circles")
-}
-
-enum BookingStatus {
-  PENDING
-  CONFIRMED
-  CANCELLED
-}
-
-enum CircleRole {
-  MEMBER
-  LEADER
-}
-
-enum Tier {
-  BRONZE
-  SILVER
-  GOLD
-  PLATINUM
-}
-
-enum ActivityType {
-  CYCLING
-  WALKING
-  PUBLIC_TRANSPORT
-  CARPOOLING
-  PLANTING
-  RECYCLING
-  WATER_CONSERVATION
-  OTHER
-}
-
-enum ActivityStatus {
-  PENDING
-  VERIFIED
-  REJECTED
-}
-
-enum MissionType {
-  CO2_REDUCTION
-  WATER_SAVING
-  PLASTIC_FREE
-  COMMUTE_CHANGE
-}
-
-enum UserMissionStatus {
-  ACTIVE
-  COMPLETED
-  FAILED
-}
-
-enum OrderStatus {
-  PENDING
-  CONFIRMED
-  SHIPPED
-  DELIVERED
-  CANCELLED
-}
-
-enum TransactionType {
-  EARNED
-  SPENT
-  BONUS
-}
-
-enum CarbonStatus {
-  PENDING
-  APPROVED
-  REJECTED
 }

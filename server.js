@@ -38,6 +38,14 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// Swagger (OpenAPI)
+const swaggerUi = require("swagger-ui-express");
+const openapi = require("./src/openapi");
+app.get("/api/docs.json", (req, res) => {
+  res.json(openapi);
+});
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openapi));
+
 // Auth middleware
 const authenticate = async (req, res, next) => {
   try {
@@ -47,6 +55,22 @@ const authenticate = async (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1];
+
+    // Mock for testing if needed
+    if (
+      (process.env.NODE_ENV === "test" ||
+        process.env.NODE_ENV === "development") &&
+      token === "mock-token"
+    ) {
+      req.user = {
+        uid: "test-user-id",
+        email: "test@example.com",
+        name: "Test User",
+        picture: "https://example.com/avatar.jpg",
+      };
+      return next();
+    }
+
     const decodedToken = await admin.auth().verifyIdToken(token);
     req.user = decodedToken;
     next();
@@ -77,14 +101,49 @@ app.get("/api/user/profile", authenticate, async (req, res) => {
   }
 });
 
+app.post("/api/user/sync", authenticate, async (req, res) => {
+  try {
+    const { email, name, picture } = req.user; // Standard Firebase claims
+
+    const user = await prisma.user.upsert({
+      where: { firebaseId: req.user.uid },
+      update: {
+        email: email,
+        displayName: name,
+        photoURL: picture,
+      },
+      create: {
+        firebaseId: req.user.uid,
+        email: email || `user_${req.user.uid}@example.com`, // Fallback
+        displayName: name || "Eco Warrior",
+        photoURL: picture,
+      },
+    });
+
+    res.json(user);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to sync user" });
+  }
+});
+
 // Activity routes
 app.post("/api/activities", authenticate, async (req, res) => {
   try {
     const { type, title, description, co2Saved, waterSaved } = req.body;
 
+    // Get the user from DB
+    const user = await prisma.user.findUnique({
+      where: { firebaseId: req.user.uid },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
     const activity = await prisma.activity.create({
       data: {
-        userId: req.user.uid,
+        userId: user.id,
         type,
         title,
         description,
@@ -101,8 +160,17 @@ app.post("/api/activities", authenticate, async (req, res) => {
 
 app.get("/api/activities", authenticate, async (req, res) => {
   try {
+    // Get the user from DB
+    const user = await prisma.user.findUnique({
+      where: { firebaseId: req.user.uid },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
     const activities = await prisma.activity.findMany({
-      where: { userId: req.user.uid },
+      where: { userId: user.id },
       orderBy: { createdAt: "desc" },
     });
 
@@ -125,6 +193,37 @@ app.get("/api/missions", async (req, res) => {
   }
 });
 
+app.post("/api/missions/:id/join", authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get the user from DB
+    const user = await prisma.user.findUnique({
+      where: { firebaseId: req.user.uid },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const userMission = await prisma.userMission.create({
+      data: {
+        userId: user.id,
+        missionId: id,
+        status: "ACTIVE",
+      },
+    });
+    res.status(201).json(userMission);
+  } catch (error) {
+    console.error(error);
+    if (error.code === "P2002") {
+      // Unique constraint violation - already joined
+      return res.status(400).json({ error: "Already joined this mission" });
+    }
+    res.status(500).json({ error: "Failed to join mission" });
+  }
+});
+
 // Shop routes
 app.get("/api/shop/items", async (req, res) => {
   try {
@@ -139,7 +238,7 @@ app.get("/api/shop/items", async (req, res) => {
 });
 
 // AgriTours routes
-app.get("/api/agritours", async (req, res) => {
+app.get("/api/tours", async (req, res) => {
   try {
     const tours = await prisma.agriTour.findMany({
       where: { isActive: true },
@@ -148,6 +247,48 @@ app.get("/api/agritours", async (req, res) => {
     res.json(tours);
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// EcoCircles routes
+app.get("/api/circles", async (req, res) => {
+  try {
+    const circles = await prisma.ecoCircle.findMany();
+
+    res.json(circles);
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.post("/api/circles/:id/join", authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get the user from DB
+    const user = await prisma.user.findUnique({
+      where: { firebaseId: req.user.uid },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const userCircle = await prisma.userEcoCircle.create({
+      data: {
+        userId: user.id,
+        circleId: id,
+        role: "MEMBER",
+      },
+    });
+    res.status(201).json(userCircle);
+  } catch (error) {
+    console.error(error);
+    if (error.code === "P2002") {
+      // Unique constraint violation - already joined
+      return res.status(400).json({ error: "Already joined this circle" });
+    }
+    res.status(500).json({ error: "Failed to join circle" });
   }
 });
 
