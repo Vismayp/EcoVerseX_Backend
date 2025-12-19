@@ -120,6 +120,9 @@ firestore-debug.log
 .env.test.local
 .env.production.local
 
+# Firebase
+firebase-service-account.json
+
 # Database
 *.db
 *.sqlite
